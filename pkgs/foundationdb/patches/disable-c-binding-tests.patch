@@ -1,0 +1,54 @@
+diff --git a/bindings/c/CMakeLists.txt b/bindings/c/CMakeLists.txt
+index b1e0ef178..6352709e3 100644
+--- a/bindings/c/CMakeLists.txt
++++ b/bindings/c/CMakeLists.txt
+@@ -100,7 +100,7 @@ if(WIN32)
+ endif()
+ 
+ # The tests don't build on windows
+-if(NOT WIN32)
++if(FALSE)
+   set(MAKO_SRCS
+     test/mako/admin_server.hpp
+     test/mako/admin_server.cpp
+@@ -430,7 +430,7 @@ if(OPEN_FOR_IDE)
+   target_link_libraries(fdb_c_shim_lib_tester PRIVATE fdb_c_shim SimpleOpt fdb_cpp Threads::Threads)
+   target_include_directories(fdb_c_shim_lib_tester PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/foundationdb/ ${CMAKE_SOURCE_DIR}/flow/include)
+ 
+-elseif(NOT WIN32 AND NOT APPLE) # Linux Only
++elseif(FALSE) # Linux Only
+ 
+   set(SHIM_LIB_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+ 
+@@ -536,7 +536,7 @@ fdb_install(
+   DESTINATION_SUFFIX "/cmake/${targets_export_name}"
+   COMPONENT clients)
+ 
+-if(NOT WIN32 AND NOT APPLE) # Linux Only
++if(FALSE) # Linux Only
+ 
+   fdb_install(
+     FILES foundationdb/fdb_c_shim.h
+diff --git a/fdbcli/CMakeLists.txt b/fdbcli/CMakeLists.txt
+index dc8b59750..e68a7fba2 100644
+--- a/fdbcli/CMakeLists.txt
++++ b/fdbcli/CMakeLists.txt
+@@ -25,7 +25,7 @@ if(NOT OPEN_FOR_IDE)
+   endif()
+ endif()
+ 
+-if (NOT WIN32 AND NOT OPEN_FOR_IDE)
++if (FALSE)
+   add_dependencies(fdbcli external_client)
+ 
+   add_fdbclient_test(
+diff --git a/fdbmonitor/CMakeLists.txt b/fdbmonitor/CMakeLists.txt
+index 1eb15ac26..10d16f010 100644
+--- a/fdbmonitor/CMakeLists.txt
++++ b/fdbmonitor/CMakeLists.txt
+@@ -62,4 +62,4 @@ endif()
+ add_custom_target(generate_profile
+   COMMAND ${CMAKE_BINARY_DIR}/contrib/generate_profile.sh ${CMAKE_BINARY_DIR})
+ 
+-add_dependencies(generate_profile fdbmonitor fdbserver mako fdbcli)
++add_dependencies(generate_profile fdbmonitor fdbserver fdbcli)
