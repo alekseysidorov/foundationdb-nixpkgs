@@ -45,48 +45,17 @@
               localOverlay
             ];
           };
-          dockerTools = pkgsCross.pkgsBuildHost.dockerTools;
+        in pkgsCross.callPackage ./dockerImage.nix { };
 
-          entryPoint = pkgsCross.writeShellScriptBin "entry-point.sh"
-            ''
-              mkdir -p /var/foundationdb/logs
-              mkdir -p /var/foundationdb/data
+      dockerImages = {
+        arm64 = mkDockerImage { config = "aarch64-unknown-linux-gnu"; };
+        x86_64 = mkDockerImage { config = "x86_64-unknown-linux-gnu"; };
+      };
 
-              fdbcli -C ${fdb.cluster} --exec "configure new single memory; status details" &
-              fdbserver -p 0.0.0.0:${fdb.port} \
-                --datadir /var/foundationdb/data -C ${fdb.cluster} \
-                --logdir /var/foundationdb/logs
-            '';
-        in
-        dockerTools.buildLayeredImage {
-          name = "foundationdb";
-          tag = "latest";
-
-          contents = with pkgsCross; [
-            fdbPackages.foundationdb73
-            # Certificates
-            dockerTools.usrBinEnv
-            dockerTools.binSh
-            dockerTools.caCertificates
-            dockerTools.fakeNss
-            # Utilites like ldd and bash to help image debugging
-            stdenv.cc.libc_bin
-            coreutils
-            bashInteractive
-            nano
-            entryPoint
-          ];
-
-          config = {
-            Cmd = [ "/bin/entry-point.sh" ];
-            WorkingDir = "/";
-            Expose = fdb.port;
-          };
-        };
-
-      loadDockerImage = { dockerImage }: pkgs.writeScriptBin "load-docker" ''
+            runDockerImage = dockerImage: pkgs.writeScriptBin "load-docker" ''
         docker=${pkgs.docker}/bin/docker
         docker load -i "${dockerImage}"
+        docker run -it "${dockerImage.imageName}:${dockerImage.imageTag}"
       '';
     in
     {
@@ -109,10 +78,9 @@
 
       packages = {
         foundationdb73 = pkgs.fdbPackages.foundationdb73;
-        dockerImage_aarch64 = loadDockerImage {
-          dockerImage = mkDockerImage { config = "aarch64-unknown-linux-gnu"; };
-        };
-        dockerImage_x86_64 = mkDockerImage { config = "x86_64-unknown-linux-gnu"; };
+
+        dockerImage_arm64 = runDockerImage dockerImages.arm64;
+        dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
       };
     });
 }
