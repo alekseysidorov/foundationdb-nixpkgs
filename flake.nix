@@ -34,7 +34,7 @@
         cluster = pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:${port}";
       };
 
-      mkDockerImage = crossSystem:
+      mkDockerImage = {crossSystem, tag ? "latest" }:
         let
           # Setup pkgs for cross compilation
           pkgsCross = pkgs.mkCrossPkgs {
@@ -45,14 +45,14 @@
               localOverlay
             ];
           };
-        in pkgsCross.callPackage ./dockerImage.nix { };
+        in pkgsCross.callPackage ./dockerImage.nix { inherit tag; };
 
       dockerImages = {
-        arm64 = mkDockerImage { config = "aarch64-unknown-linux-gnu"; };
-        x86_64 = mkDockerImage { config = "x86_64-unknown-linux-gnu"; };
+        arm64 = mkDockerImage { crossSystem.config = "aarch64-unknown-linux-gnu"; tag = "latest_arm64"; };
+        x86_64 = mkDockerImage { crossSystem.config = "x86_64-unknown-linux-gnu"; tag = "latest_x86_64"; };
       };
 
-            runDockerImage = dockerImage: pkgs.writeScriptBin "load-docker" ''
+      runDockerImage = dockerImage: pkgs.writeScriptBin "load-docker" ''
         docker=${pkgs.docker}/bin/docker
         docker load -i "${dockerImage}"
         docker run -it "${dockerImage.imageName}:${dockerImage.imageTag}"

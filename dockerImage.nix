@@ -9,6 +9,7 @@ let
 
   entryPoint = pkgs.writeShellScriptBin "entry-point.sh"
     ''
+      uname -a
       mkdir -p /var/foundationdb/logs
       mkdir -p /var/foundationdb/data
 
