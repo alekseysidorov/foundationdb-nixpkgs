@@ -1,5 +1,6 @@
 { pkgs
 , dockerTools
+, name ? "foundationdb"
 , tag ? "latest"
 }:
 
@@ -22,8 +23,7 @@ let
 
 in
 dockerTools.buildLayeredImage {
-  name = "foundationdb";
-  inherit tag;
+  inherit name tag;
 
   contents = with pkgs; [
     fdbPackages.foundationdb73

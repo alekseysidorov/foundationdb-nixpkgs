@@ -28,35 +28,22 @@
       # Eval the treefmt modules from ./treefmt.nix
       treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
-      # FoundationDB configuration for local launch.
-      fdb = rec {
-        port = "4689";
-        cluster = pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:${port}";
-      };
-
-      mkDockerImage = {crossSystem, tag ? "latest" }:
+      mkDockerImage = { platform, imageName ? "foundationdb", imageTag ? "latest" }:
         let
           # Setup pkgs for cross compilation
           pkgsCross = pkgs.mkCrossPkgs {
             src = nixpkgs;
-            inherit crossSystem;
             localSystem = system;
+            crossSystem.config = "${platform}-unknown-linux-gnu";
             overlays = [
               localOverlay
             ];
           };
-        in pkgsCross.callPackage ./dockerImage.nix { inherit tag; };
-
-      dockerImages = {
-        arm64 = mkDockerImage { crossSystem.config = "aarch64-unknown-linux-gnu"; tag = "latest_arm64"; };
-        x86_64 = mkDockerImage { crossSystem.config = "x86_64-unknown-linux-gnu"; tag = "latest_x86_64"; };
-      };
-
-      runDockerImage = dockerImage: pkgs.writeScriptBin "load-docker" ''
-        docker=${pkgs.docker}/bin/docker
-        docker load -i "${dockerImage}"
-        docker run -it "${dockerImage.imageName}:${dockerImage.imageTag}"
-      '';
+        in
+        pkgsCross.callPackage ./dockerImage.nix {
+          tag = "${imageTag}_${platform}";
+          name = imageName;
+        };
     in
     {
       # for `nix fmt`
@@ -72,15 +59,35 @@
         ];
 
         env = {
-          FDB_CLUSTER_FILE = "${fdb.cluster}";
+          # FoundationDB configuration for local launch.
+          FDB_CLUSTER_FILE = "${pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:4689"}";
         };
       };
 
       packages = {
         foundationdb73 = pkgs.fdbPackages.foundationdb73;
 
-        dockerImage_arm64 = runDockerImage dockerImages.arm64;
-        dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
+        dockerImage =
+          let
+            imageName = "alekseysidorov/foundationdb";
+            imageTag = "latest";
+            dockerImages = {
+              aarch64 = mkDockerImage { inherit imageName imageTag; platform = "aarch64"; };
+              x86_64 = mkDockerImage { inherit imageName imageTag; platform = "x86_64"; };
+            };
+          in
+          pkgs.writeShellApplication {
+            name = "run-docker-image";
+            runtimeInputs = with pkgs; [ docker skopeo ];
+
+            text = ''
+              set -x
+
+              docker load --input ${dockerImages.aarch64}
+              docker load --input ${dockerImages.x86_64}
+              docker run -it ${imageName}:${imageTag}_aarch64
+            '';
+          };
       };
     });
 }
