@@ -69,11 +69,16 @@ stdenv.mkDerivation {
     (lib.optionalString officialRelease "-DFDB_RELEASE=TRUE")
     # Disable CMake warnings for project developers.
     "-Wno-dev"
+
+    # LTO brings up overall build time, but results in much smaller
+    # binaries for all users and the cache.
+    "-DUSE_LTO=ON"
+
     # Disable some options that cause compilation errors
-    "-DUSE_JEMALLOC=FALSE"
     "-DBUILD_DOCUMENTATION=FALSE"
     "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
     "-DOPEN_FOR_IDE=FALSE"
+
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
     "-DOPENSSL_CRYPTO_LIBRARY=${openssl.out}/lib/libcrypto${dylib_suffix}"

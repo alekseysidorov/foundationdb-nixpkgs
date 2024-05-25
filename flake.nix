@@ -55,7 +55,7 @@
           '';
         };
     in
-    {
+    rec {
       # for `nix fmt`
       formatter = treefmt.wrapper;
       # for `nix flake check`
@@ -69,13 +69,13 @@
         ];
 
         # FoundationDB configuration for local launch.
-        env.FDB_CLUSTER_FILE = "${pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:4689"}";
+        env.FDB_CLUSTER_FILE = packages.pushDockerImage.clusterFile;
       };
 
       packages =
         let
           imageName = "alekseysidorov/foundationdb";
-          imageTag = "7.40";
+          imageTag = "7.42";
 
           dockerImages = {
             aarch64 = mkDockerImage {
@@ -97,6 +97,8 @@
           pushDockerImage = pkgs.writeShellApplication {
             name = "push-docker-image";
             runtimeInputs = with pkgs; [ docker ];
+
+            passthru.clusterFile = dockerImages.aarch64.clusterFile;
 
             text = ''
               set -x
