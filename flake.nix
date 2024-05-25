@@ -44,6 +44,16 @@
           tag = "${imageTag}_${platform}";
           name = imageName;
         };
+
+      runDockerImage = dockerImage:
+        pkgs.writeShellApplication {
+          name = "run-docker-image";
+          runtimeInputs = with pkgs; [ docker ];
+          text = ''
+            docker load --input ${dockerImage}
+            docker run -it ${dockerImage.imageName}:${dockerImage.imageTag}
+          '';
+        };
     in
     {
       # for `nix fmt`
@@ -58,36 +68,57 @@
           fdbPackages.foundationdb73
         ];
 
-        env = {
-          # FoundationDB configuration for local launch.
-          FDB_CLUSTER_FILE = "${pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:4689"}";
-        };
+        # FoundationDB configuration for local launch.
+        env.FDB_CLUSTER_FILE = "${pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:4689"}";
       };
 
-      packages = {
-        foundationdb73 = pkgs.fdbPackages.foundationdb73;
+      packages =
+        let
+          imageName = "alekseysidorov/foundationdb";
+          imageTag = "7.40";
 
-        dockerImage =
-          let
-            imageName = "alekseysidorov/foundationdb";
-            imageTag = "latest";
-            dockerImages = {
-              aarch64 = mkDockerImage { inherit imageName imageTag; platform = "aarch64"; };
-              x86_64 = mkDockerImage { inherit imageName imageTag; platform = "x86_64"; };
+          dockerImages = {
+            aarch64 = mkDockerImage {
+              inherit imageName imageTag;
+              platform = "aarch64";
             };
-          in
-          pkgs.writeShellApplication {
-            name = "run-docker-image";
-            runtimeInputs = with pkgs; [ docker skopeo ];
+            x86_64 = mkDockerImage {
+              inherit imageName imageTag;
+              platform = "x86_64";
+            };
+          };
+        in
+        {
+          foundationdb73 = pkgs.fdbPackages.foundationdb73;
+
+          dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
+          dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
+
+          pushDockerImage = pkgs.writeShellApplication {
+            name = "push-docker-image";
+            runtimeInputs = with pkgs; [ docker ];
 
             text = ''
               set -x
 
               docker load --input ${dockerImages.aarch64}
               docker load --input ${dockerImages.x86_64}
-              docker run -it ${imageName}:${imageTag}_aarch64
+
+              docker push ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag}
+              docker push ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
+
+              docker manifest create ${imageName}:${imageTag} \
+                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
+                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
+              docker manifest push ${imageName}:${imageTag}
+
+              # Publish also as latest
+              docker manifest create ${imageName}:latest \
+                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
+                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
+              docker manifest push ${imageName}:latest
             '';
           };
-      };
+        };
     });
 }
