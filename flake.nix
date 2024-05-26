@@ -1,7 +1,10 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-cross-overlay.url = "github:alekseysidorov/nixpkgs-cross-overlay";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs-cross-overlay = {
+      url = "github:alekseysidorov/nixpkgs-cross-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
   };
@@ -31,11 +34,11 @@
       mkDockerImage = { platform, imageName ? "foundationdb" }:
         let
           # Setup pkgs for cross compilation
-          pkgsCross = pkgs.mkCrossPkgs {
-            src = nixpkgs;
-            localSystem = system;
+          pkgsCross = import nixpkgs {
+            inherit system;
             crossSystem.config = "${platform}-unknown-linux-gnu";
             overlays = [
+              nixpkgs-cross-overlay.outputs.overlays.default
               localOverlay
             ];
           };

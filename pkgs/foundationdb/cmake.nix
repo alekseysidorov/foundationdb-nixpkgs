@@ -20,12 +20,13 @@
 , jemalloc
 , openssl
 , boost178
-, fmt_9
 
-, stdenv
+, llvmPackages
 }:
 
 let
+  # Clang uses less resources during compilation and linking, and as a result generates equally fast code.
+  stdenv = llvmPackages.libcxxStdenv;
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
 in
@@ -45,7 +46,6 @@ stdenv.mkDerivation {
     msgpack-cxx
     toml11
     jemalloc
-    fmt_9
   ]
   ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
 
