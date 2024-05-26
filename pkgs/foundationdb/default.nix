@@ -4,8 +4,8 @@
 
 {
   foundationdb73 = pkgs.callPackage ./cmake.nix {
-    version = "7.3.42";
-    hash = "sha256-LN4uciVsPoqQ97FP9LPJYfqMMpZIwJQZsJDuoKVGhYA=";
+    version = "7.3.43";
+    hash = "sha256-n+17dya2D3rJ/mBR1RJvmEjTtdNFVaQDIlX0TBZ/cfs=";
 
     patches = [
       ./patches/disable-flowbench.patch

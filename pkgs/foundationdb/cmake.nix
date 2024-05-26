@@ -20,6 +20,7 @@
 , jemalloc
 , openssl
 , boost178
+, fmt_9
 
 , stdenv
 }:
@@ -27,15 +28,6 @@
 let
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
-
-  # Only even numbered versions compile on aarch64; odd numbered versions have avx enabled.
-  avxEnabled = version:
-    let
-      isOdd = n: lib.trivial.mod n 2 != 0;
-      patch = lib.toInt (lib.versions.patch version);
-    in
-    isOdd patch;
-
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -53,9 +45,9 @@ stdenv.mkDerivation {
     msgpack-cxx
     toml11
     jemalloc
+    fmt_9
   ]
-  ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ]
-  ;
+  ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
 
   nativeBuildInputs = [ pkg-config cmake ninja python3 mono ]
     ++ lib.optionals isCross [
@@ -69,10 +61,6 @@ stdenv.mkDerivation {
     (lib.optionalString officialRelease "-DFDB_RELEASE=TRUE")
     # Disable CMake warnings for project developers.
     "-Wno-dev"
-
-    # LTO brings up overall build time, but results in much smaller
-    # binaries for all users and the cache.
-    "-DUSE_LTO=ON"
 
     # Disable some options that cause compilation errors
     "-DBUILD_DOCUMENTATION=FALSE"
@@ -119,8 +107,7 @@ stdenv.mkDerivation {
     description = "Open source, distributed, transactional key-value store";
     homepage = "https://www.foundationdb.org";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" ]
-      ++ lib.optionals (!(avxEnabled version)) [ "aarch64-linux" "aarch64-darwin" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
     maintainers = with maintainers; [ thoughtpolice lostnet ];
   };
 }

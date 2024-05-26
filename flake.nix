@@ -28,7 +28,7 @@
       # Eval the treefmt modules from ./treefmt.nix
       treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
-      mkDockerImage = { platform, imageName ? "foundationdb", imageTag ? "latest" }:
+      mkDockerImage = { platform, imageName ? "foundationdb" }:
         let
           # Setup pkgs for cross compilation
           pkgsCross = pkgs.mkCrossPkgs {
@@ -40,10 +40,7 @@
             ];
           };
         in
-        pkgsCross.callPackage ./dockerImage.nix {
-          tag = "${imageTag}_${platform}";
-          name = imageName;
-        };
+        pkgsCross.callPackage ./dockerImage.nix { };
 
       runDockerImage = dockerImage:
         pkgs.writeShellApplication {
@@ -54,8 +51,22 @@
             docker run -it ${dockerImage.imageName}:${dockerImage.imageTag}
           '';
         };
+
+      dockerImages = {
+        aarch64 = mkDockerImage {
+          platform = "aarch64";
+        };
+        x86_64 = mkDockerImage {
+          platform = "x86_64";
+        };
+
+        # Export variables that are the same for each image.
+        clusterFile = dockerImages.aarch64.clusterFile;
+        imageName = dockerImages.aarch64.imageName;
+        fdbVersion = dockerImages.aarch64.fdbVersion;
+      };
     in
-    rec {
+    {
       # for `nix fmt`
       formatter = treefmt.wrapper;
       # for `nix flake check`
@@ -69,58 +80,40 @@
         ];
 
         # FoundationDB configuration for local launch.
-        env.FDB_CLUSTER_FILE = packages.pushDockerImage.clusterFile;
+        env.FDB_CLUSTER_FILE = dockerImages.clusterFile;
       };
 
-      packages =
-        let
-          imageName = "alekseysidorov/foundationdb";
-          imageTag = "7.42";
+      packages = {
+        foundationdb73 = pkgs.fdbPackages.foundationdb73;
 
-          dockerImages = {
-            aarch64 = mkDockerImage {
-              inherit imageName imageTag;
-              platform = "aarch64";
-            };
-            x86_64 = mkDockerImage {
-              inherit imageName imageTag;
-              platform = "x86_64";
-            };
-          };
-        in
-        {
-          foundationdb73 = pkgs.fdbPackages.foundationdb73;
+        dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
+        dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
 
-          dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
-          dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
+        pushDockerImage = pkgs.writeShellApplication {
+          name = "push-docker-image";
+          runtimeInputs = with pkgs; [ docker ];
 
-          pushDockerImage = pkgs.writeShellApplication {
-            name = "push-docker-image";
-            runtimeInputs = with pkgs; [ docker ];
+          text = ''
+            set -x
 
-            passthru.clusterFile = dockerImages.aarch64.clusterFile;
+            docker load --input ${dockerImages.aarch64}
+            docker load --input ${dockerImages.x86_64}
 
-            text = ''
-              set -x
+            docker push ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag}
+            docker push ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
 
-              docker load --input ${dockerImages.aarch64}
-              docker load --input ${dockerImages.x86_64}
+            docker manifest create ${dockerImages.imageName}:${dockerImages.fdbVersion} \
+              --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
+              --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
+            docker manifest push ${dockerImages.imageName}:${dockerImages.fdbVersion}
 
-              docker push ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag}
-              docker push ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-
-              docker manifest create ${imageName}:${imageTag} \
-                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
-                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-              docker manifest push ${imageName}:${imageTag}
-
-              # Publish also as latest
-              docker manifest create ${imageName}:latest \
-                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
-                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-              docker manifest push ${imageName}:latest
-            '';
-          };
+            # Publish also as latest
+            docker manifest create ${dockerImages.imageName}:latest \
+              --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
+              --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
+            docker manifest push ${dockerImages.imageName}:latest
+          '';
         };
+      };
     });
 }
