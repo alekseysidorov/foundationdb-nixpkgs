@@ -16,7 +16,7 @@ let
       mkdir -p /var/foundationdb/data
 
       echo "Starting FDB server on 0.0.0.0:${port}"
-      fdbcli -C ${clusterFile} --exec "configure new single memory; status details" &
+      fdbcli -C ${clusterFile} --exec "configure new single memory; status" &
               
       fdbserver -p 0.0.0.0:${port} \
         --datadir /var/foundationdb/data -C ${clusterFile} \
