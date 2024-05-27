@@ -6,7 +6,7 @@ let
   fdbVersion = pkgs.fdbPackages.foundationdb73.version;
   platform = pkgs.stdenv.targetPlatform.qemuArch;
 
-  port = "4500";
+  port = "4689";
   clusterFile = pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:${port}";
 
   entryPoint = pkgs.writeShellScriptBin "entry-point.sh"
