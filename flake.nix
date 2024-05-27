@@ -81,9 +81,6 @@
         buildInputs = with pkgs; [
           fdbPackages.foundationdb73
         ];
-
-        # FoundationDB configuration for local launch.
-        env.FDB_CLUSTER_FILE = dockerImages.clusterFile;
       };
 
       packages = {
