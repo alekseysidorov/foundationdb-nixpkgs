@@ -6,20 +6,26 @@ let
   fdbVersion = pkgs.fdbPackages.foundationdb73.version;
   platform = pkgs.stdenv.targetPlatform.qemuArch;
 
-  port = "4689";
-  clusterFile = pkgs.writeText "fdb.cluster" "test1:testdb1@127.0.0.1:${port}";
-
   entryPoint = pkgs.writeShellScriptBin "entry-point.sh"
     ''
-      uname -a
+      # Preparing environment
       mkdir -p /var/foundationdb/logs
       mkdir -p /var/foundationdb/data
+      
+      FDB_PORT="''${FDB_PORT:=4500}"
+      FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
+      echo "Creating FDB cluster file..."
+      echo "test1:testdb1@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
 
-      echo "Starting FDB server on 0.0.0.0:${port}"
-      fdbcli -C ${clusterFile} --exec "configure new single memory; status" &
+      echo ""
+      cat $FDB_CLUSTER_FILE
+      
+      echo "Starting FDB server on 0.0.0.0:$FDB_PORT"
+      fdbcli -C $FDB_CLUSTER_FILE --exec "configure new single memory; status" &
               
-      fdbserver -p 0.0.0.0:${port} \
-        --datadir /var/foundationdb/data -C ${clusterFile} \
+      fdbserver -p 0.0.0.0:$FDB_PORT \
+        -C $FDB_CLUSTER_FILE
+        --datadir /var/foundationdb/data \
         --logdir /var/foundationdb/logs
     '';
 
@@ -46,7 +52,6 @@ let
     config = {
       Cmd = [ "/bin/entry-point.sh" ];
       WorkingDir = "/";
-      Expose = port;
     };
   };
 
@@ -54,7 +59,6 @@ let
   extendedAttrs =
     let
       passthru = dockerImage.passthru // {
-        inherit port clusterFile platform;
         fdbVersion = pkgs.fdbPackages.foundationdb73.version;
       };
     in
