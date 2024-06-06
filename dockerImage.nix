@@ -15,7 +15,7 @@ let
       FDB_PORT="''${FDB_PORT:=4500}"
       FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
       echo "Creating FDB cluster file..."
-      echo "test1:testdb1@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
+      echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
 
       echo ""
       cat $FDB_CLUSTER_FILE
@@ -41,11 +41,6 @@ let
       dockerTools.binSh
       dockerTools.caCertificates
       dockerTools.fakeNss
-      # Utilites like ldd and bash to help image debugging
-      stdenv.cc.libc_bin
-      coreutils
-      bashInteractive
-      nano
       entryPoint
     ];
 

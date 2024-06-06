@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
     nixpkgs-cross-overlay = {
       url = "github:alekseysidorov/nixpkgs-cross-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -77,9 +77,9 @@
       # Overlay with the foundationdb packages.
       overlays.default = localOverlay;
 
-      devShells.default = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          fdbPackages.foundationdb73
+      devShells.default = with pkgs; mkShell {
+        buildInputs = [
+          fdbPackages.foundationdb73 
         ];
       };
 
