@@ -126,7 +126,7 @@
         };
       };
 
-      applications = {
+      apps = {
         fdbexplorer = flake-utils.lib.mkApp { drv = self.packages.${system}.fdbexplorer; };
       };
     });
