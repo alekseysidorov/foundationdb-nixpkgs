@@ -77,14 +77,24 @@
       # Overlay with the foundationdb packages.
       overlays.default = localOverlay;
 
-      devShells.default = with pkgs; mkShell {
-        buildInputs = [
-          fdbPackages.foundationdb73 
-        ];
+      devShells = with pkgs; rec {
+        foundationdb71 = mkShell {
+          nativeBuildInputs = [
+            fdbPackages.foundationdb71
+          ];
+        };
+        foundationdb73 = mkShell {
+          nativeBuildInputs = [
+            fdbexplorer
+            fdbPackages.foundationdb73
+          ];
+        };
+        default = foundationdb73;
       };
 
       packages = {
         foundationdb73 = pkgs.fdbPackages.foundationdb73;
+        foundationdb71 = pkgs.fdbPackages.foundationdb71;
 
         dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
         dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
