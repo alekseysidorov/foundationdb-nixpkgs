@@ -101,7 +101,7 @@ stdenv.mkDerivation {
     mv $out/lib $lib/lib
   '';
 
-  outputs = [ "out" "dev" "lib" ];
+  outputs = [ "bin" "out" "dev" "lib" ];
 
   meta = with lib; {
     description = "Open source, distributed, transactional key-value store";

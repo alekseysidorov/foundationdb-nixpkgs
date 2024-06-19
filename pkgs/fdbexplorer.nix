@@ -18,7 +18,7 @@ buildGoModule rec {
   vendorHash = "sha256-5tlHi+PtolGhCKPsZgOed1rTLsWi7UyFaq7JZWBxtzo=";
 
   buildInputs = [
-    fdbPackages.latest
+    fdbPackages.latest.dev
   ];
 
   meta = with lib; {
