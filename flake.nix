@@ -85,7 +85,6 @@
         };
         foundationdb73 = mkShell {
           nativeBuildInputs = [
-            fdbexplorer
             fdbPackages.foundationdb73
           ];
         };
@@ -95,6 +94,7 @@
       packages = {
         foundationdb73 = pkgs.fdbPackages.foundationdb73;
         foundationdb71 = pkgs.fdbPackages.foundationdb71;
+        fdbexplorer = pkgs.fdbexplorer;
 
         dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
         dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
@@ -124,6 +124,10 @@
             docker manifest push ${dockerImages.imageName}:latest
           '';
         };
+      };
+
+      applications = {
+        fdbexplorer = flake-utils.lib.mkApp { drv = self.packages.${system}.fdbexplorer; };
       };
     });
 }
