@@ -1,8 +1,8 @@
-{
-  lib,
-  buildGoModule,
-  fdbPackages,
-  fetchFromGitHub,
+{ lib
+, buildGoModule
+, fdbPackages
+, fetchFromGitHub
+,
 }:
 
 buildGoModule rec {
