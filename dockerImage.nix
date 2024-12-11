@@ -1,17 +1,20 @@
-{ pkgs
-, dockerTools
+{ dockerTools
+, stdenv
+, writeShellScriptBin
+, fdbPackages
+, foundationdb ? fdbPackages.foundationdb73
 }:
 
 let
-  fdbVersion = pkgs.fdbPackages.foundationdb73.version;
-  platform = pkgs.stdenv.targetPlatform.qemuArch;
+  fdbVersion = foundationdb.version;
+  platform = stdenv.targetPlatform.qemuArch;
 
-  entryPoint = pkgs.writeShellScriptBin "entry-point.sh"
+  entryPoint = writeShellScriptBin "entry-point.sh"
     ''
       # Preparing environment
       mkdir -p /var/foundationdb/logs
       mkdir -p /var/foundationdb/data
-      
+
       FDB_PORT="''${FDB_PORT:=4500}"
       FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
       echo "Creating FDB cluster file..."
@@ -19,10 +22,10 @@ let
 
       echo ""
       cat $FDB_CLUSTER_FILE
-      
+
       echo "Starting FDB server on 0.0.0.0:$FDB_PORT"
       fdbcli -C $FDB_CLUSTER_FILE --exec "configure new single memory; status" &
-              
+
       fdbserver -p 0.0.0.0:$FDB_PORT \
         -C $FDB_CLUSTER_FILE
         --datadir /var/foundationdb/data \
@@ -34,8 +37,8 @@ let
     tag = "${fdbVersion}_${platform}";
 
 
-    contents = with pkgs; [
-      fdbPackages.foundationdb73
+    contents = [
+      foundationdb
       # Certificates
       dockerTools.usrBinEnv
       dockerTools.binSh
@@ -54,7 +57,7 @@ let
   extendedAttrs =
     let
       passthru = dockerImage.passthru // {
-        fdbVersion = pkgs.fdbPackages.foundationdb73.version;
+        fdbVersion = foundationdb.version;
       };
     in
     passthru // { inherit passthru; };
