@@ -31,7 +31,7 @@
       # Eval the treefmt modules from ./treefmt.nix
       treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
-      mkDockerImage = { platform, imageName ? "foundationdb" }:
+      mkDockerImage = { platform }:
         let
           # Setup pkgs for cross compilation
           pkgsCross = import nixpkgs {

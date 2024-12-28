@@ -17,7 +17,6 @@
 , toml11
 , darwin
 , writeShellScriptBin
-, jemalloc
 , openssl
 , boost178
 
@@ -45,7 +44,6 @@ stdenv.mkDerivation {
     boost178
     msgpack-cxx
     toml11
-    jemalloc
   ]
   ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
 
@@ -64,8 +62,13 @@ stdenv.mkDerivation {
 
     # Disable some options that cause compilation errors
     "-DBUILD_DOCUMENTATION=FALSE"
-    "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
     "-DOPEN_FOR_IDE=FALSE"
+    # CMake Error at fdbserver/CMakeLists.txt:332 (find_library):
+    # >   Could not find lz4_STATIC_LIBRARIES using the following names: liblz4.a
+    "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
+    # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
+    # project at build time.
+    "-DUSE_JEMALLOC=FALSE"
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
