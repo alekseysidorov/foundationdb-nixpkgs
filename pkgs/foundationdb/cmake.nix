@@ -110,7 +110,7 @@ stdenv.mkDerivation {
     description = "Open source, distributed, transactional key-value store";
     homepage = "https://www.foundationdb.org";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "riscv64-linux" ];
     maintainers = with maintainers; [ thoughtpolice lostnet ];
   };
 }
