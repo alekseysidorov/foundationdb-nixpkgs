@@ -1,10 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
-    nixpkgs-cross-overlay = {
-      url = "github:alekseysidorov/nixpkgs-cross-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
   };
@@ -12,7 +9,6 @@
   outputs =
     { self
     , nixpkgs
-    , nixpkgs-cross-overlay
     , flake-utils
     , treefmt-nix
     }: flake-utils.lib.eachDefaultSystem
@@ -24,7 +20,6 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
-            nixpkgs-cross-overlay.outputs.overlays.default
             (import ./.)
           ];
         };
@@ -40,7 +35,6 @@
               inherit system;
               crossSystem.config = "${platform}-unknown-linux-gnu";
               overlays = [
-                nixpkgs-cross-overlay.outputs.overlays.default
                 localOverlay
               ];
             };
