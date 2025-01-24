@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
@@ -58,9 +58,6 @@
           x86_64 = mkDockerImage {
             platform = "x86_64";
           };
-          riscv64 = mkDockerImage {
-            platform = "riscv64";
-          };
 
           # Export variables that are the same for each image.
           clusterFile = dockerImages.aarch64.clusterFile;
@@ -95,7 +92,6 @@
 
           dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
           dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
-          dockerImage_riscv64 = runDockerImage dockerImages.riscv64;
 
           pushDockerImage = pkgs.writeShellApplication {
             name = "push-docker-image";
