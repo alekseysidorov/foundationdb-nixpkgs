@@ -10,7 +10,7 @@
 , fetchFromGitHub
 , cmake
 , ninja
-, python3
+, python39
 , mono
 , pkg-config
 , msgpack-cxx
@@ -19,15 +19,18 @@
 , writeShellScriptBin
 , openssl
 , boost178
+, jemalloc
 
 , llvmPackages
 }:
 
 let
-  # Clang uses less resources during compilation and linking, and as a result generates equally fast code.
-  stdenv = llvmPackages.libcxxStdenv;
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
+
+  # Clang uses less resources during compilation and linking, and as a result generates 
+  # equally fast code.
+  stdenv = llvmPackages.libcxxStdenv;
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -39,21 +42,28 @@ stdenv.mkDerivation {
     inherit rev hash;
   };
 
-  buildInputs = [
-    openssl
-    boost178
-    msgpack-cxx
-    toml11
-  ]
-  ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
-
-  nativeBuildInputs = [ pkg-config cmake ninja python3 mono ]
-    ++ lib.optionals isCross [
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+    ninja
+    mono
+    python39
+  ] ++ lib.optionals isCross [
     # The simplest and almost incorrect way to provide the proper 'strip' executable.
     (writeShellScriptBin
       "strip"
       ''${stdenv.cc.targetPrefix}strip "$@"'')
   ];
+
+
+  buildInputs = [
+    openssl
+    boost178
+    msgpack-cxx
+    toml11
+    jemalloc
+  ]
+  ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
 
   cmakeFlags = [
     (lib.optionalString officialRelease "-DFDB_RELEASE=TRUE")
@@ -68,7 +78,7 @@ stdenv.mkDerivation {
     "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
     # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
     # project at build time.
-    "-DUSE_JEMALLOC=FALSE"
+    (lib.optionalString (version != "7.3.43") "-DUSE_JEMALLOC=FALSE")
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
@@ -110,7 +120,7 @@ stdenv.mkDerivation {
     description = "Open source, distributed, transactional key-value store";
     homepage = "https://www.foundationdb.org";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
+    platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" "riscv64-linux" ];
     maintainers = with maintainers; [ thoughtpolice lostnet ];
   };
 }
