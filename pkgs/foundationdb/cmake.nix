@@ -10,12 +10,11 @@
 , fetchFromGitHub
 , cmake
 , ninja
-, python39
+, python3
 , mono
 , pkg-config
 , msgpack-cxx
 , toml11
-, darwin
 , writeShellScriptBin
 , openssl
 , boost178
@@ -28,7 +27,7 @@ let
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
 
-  # Clang uses less resources during compilation and linking, and as a result generates 
+  # Clang uses less resources during compilation and linking, and as a result generates
   # equally fast code.
   stdenv = llvmPackages.libcxxStdenv;
 in
@@ -47,7 +46,7 @@ stdenv.mkDerivation {
     cmake
     ninja
     mono
-    python39
+    python3
   ] ++ lib.optionals isCross [
     # The simplest and almost incorrect way to provide the proper 'strip' executable.
     (writeShellScriptBin
@@ -62,8 +61,7 @@ stdenv.mkDerivation {
     msgpack-cxx
     toml11
     jemalloc
-  ]
-  ++ lib.optionals stdenv.isDarwin [ darwin.apple_sdk.frameworks.Foundation ];
+  ];
 
   cmakeFlags = [
     (lib.optionalString officialRelease "-DFDB_RELEASE=TRUE")
@@ -120,7 +118,7 @@ stdenv.mkDerivation {
     description = "Open source, distributed, transactional key-value store";
     homepage = "https://www.foundationdb.org";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" "riscv64-linux" ];
-    maintainers = with maintainers; [ thoughtpolice lostnet ];
+    platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
+    maintainers = with maintainers; [ thoughtpolice lostnet alekseysidorov ];
   };
 }

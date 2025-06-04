@@ -2,7 +2,6 @@
 , buildGoModule
 , fdbPackages
 , fetchFromGitHub
-,
 }:
 
 buildGoModule rec {
