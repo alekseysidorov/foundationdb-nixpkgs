@@ -13,7 +13,7 @@
 , python3
 , mono
 , pkg-config
-, msgpack-cxx
+, msgpack
 , toml11
 , writeShellScriptBin
 , openssl
@@ -58,7 +58,7 @@ stdenv.mkDerivation {
   buildInputs = [
     openssl
     boost178
-    msgpack-cxx
+    msgpack
     toml11
     jemalloc
   ];
