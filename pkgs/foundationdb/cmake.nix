@@ -19,6 +19,7 @@
 , openssl
 , boost178
 , jemalloc
+, zlib
 
 , llvmPackages
 }:
@@ -61,6 +62,7 @@ stdenv.mkDerivation {
     msgpack
     toml11
     jemalloc
+    zlib
   ];
 
   cmakeFlags = [
@@ -76,7 +78,7 @@ stdenv.mkDerivation {
     "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
     # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
     # project at build time.
-    (lib.optionalString (version != "7.3.43") "-DUSE_JEMALLOC=FALSE")
+    (lib.optionalString (version == "7.1.61") "-DUSE_JEMALLOC=FALSE")
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
