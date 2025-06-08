@@ -20,17 +20,13 @@
 , boost178
 , jemalloc
 , zlib
-
-, llvmPackages
+, stdenv
 }:
 
 let
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
 
-  # Clang uses less resources during compilation and linking, and as a result generates
-  # equally fast code.
-  stdenv = llvmPackages.libcxxStdenv;
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -88,12 +84,13 @@ stdenv.mkDerivation {
 
   hardeningDisable = [ "fortify" ];
 
-  env.NIX_CFLAGS_COMPILE = toString [
-    # Needed with GCC 12
-    "-Wno-missing-template-keyword"
-    # Needed to compile on aarch64
-    (lib.optionalString stdenv.isAarch64 "-march=armv8-a+crc")
-  ];
+  env.NIX_CFLAGS_COMPILE = toString
+    [
+      # Needed with GCC 12
+      "-Wno-missing-template-keyword"
+      # Needed to compile on aarch64
+      (lib.optionalString stdenv.isAarch64 "-march=armv8-a+crc")
+    ];
 
   inherit patches;
 
