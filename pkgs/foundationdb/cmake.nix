@@ -20,13 +20,19 @@
 , boost178
 , jemalloc
 , zlib
-, stdenv
+
+, llvmPackages
 }:
 
 let
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
   isCross = stdenv.hostPlatform != stdenv.buildPlatform;
-
+  # Clang uses less resources during compilation and linking, and as a result generates
+  # equally fast code.
+  stdenv = llvmPackages.libcxxStdenv;
+  # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
+  # project at build time.
+  enableJemalloc = false;
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -72,10 +78,7 @@ stdenv.mkDerivation {
     # CMake Error at fdbserver/CMakeLists.txt:332 (find_library):
     # >   Could not find lz4_STATIC_LIBRARIES using the following names: liblz4.a
     "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
-    # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
-    # project at build time.
-    (lib.optionalString (version == "7.1.61") "-DUSE_JEMALLOC=FALSE")
-
+    (lib.optional enableJemalloc "-DUSE_JEMALLOC=FALSE")
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
     "-DOPENSSL_CRYPTO_LIBRARY=${openssl.out}/lib/libcrypto${dylib_suffix}"
@@ -84,13 +87,12 @@ stdenv.mkDerivation {
 
   hardeningDisable = [ "fortify" ];
 
-  env.NIX_CFLAGS_COMPILE = toString
-    [
-      # Needed with GCC 12
-      "-Wno-missing-template-keyword"
-      # Needed to compile on aarch64
-      (lib.optionalString stdenv.isAarch64 "-march=armv8-a+crc")
-    ];
+  env.NIX_CFLAGS_COMPILE = toString [
+    # Needed with GCC 12
+    "-Wno-missing-template-keyword"
+    # Needed to compile on aarch64
+    (lib.optionalString stdenv.isAarch64 "-march=armv8-a+crc")
+  ];
 
   inherit patches;
 
