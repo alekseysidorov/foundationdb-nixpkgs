@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
@@ -25,8 +25,7 @@
         };
 
         # Eval the treefmt modules from ./treefmt.nix
-        treefmtPkgs = import nixpkgs { inherit system; };
-        treefmt = (treefmt-nix.lib.evalModule treefmtPkgs ./treefmt.nix).config.build;
+        treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
         mkDockerImage = { platform }:
           let

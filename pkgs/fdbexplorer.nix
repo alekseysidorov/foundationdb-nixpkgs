@@ -2,20 +2,19 @@
 , buildGoModule
 , fdbPackages
 , fetchFromGitHub
-,
 }:
 
 buildGoModule rec {
   pname = "fdbexplorer";
-  version = "0.0.21";
+  version = "0.0.29";
 
   src = fetchFromGitHub {
     owner = "pwood";
     repo = "fdbexplorer";
     rev = "v${version}";
-    sha256 = "sha256-OXv0VDDdpIbuphSc+z1ImT1xTPIVlHmThKmvoHCSLjw=";
+    sha256 = "sha256-Hxx3/qSLSn7i/iSzLLmgptWrzSNqpRkuf3ziVhmaCHU=";
   };
-  vendorHash = "sha256-5tlHi+PtolGhCKPsZgOed1rTLsWi7UyFaq7JZWBxtzo=";
+  vendorHash = "sha256-JCh2DQ0cAyQOQM6oBdBsE4VvOrZPKXF05GF+t8o55VM=";
 
   buildInputs = [
     fdbPackages.latest.dev

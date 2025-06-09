@@ -2,11 +2,11 @@
 , stdenv
 , writeShellScriptBin
 , fdbPackages
-, foundationdb ? fdbPackages.foundationdb73
+, fdb ? fdbPackages.foundationdb71
 }:
 
 let
-  fdbVersion = foundationdb.version;
+  fdbVersion = fdb.version;
   platform = stdenv.targetPlatform.qemuArch;
 
   entryPoint = writeShellScriptBin "entry-point.sh"
@@ -19,7 +19,6 @@ let
       FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
       echo "Creating FDB cluster file..."
       echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
-
       echo ""
       cat $FDB_CLUSTER_FILE
 
@@ -36,9 +35,8 @@ let
     name = "alekseysidorov/foundationdb";
     tag = "${fdbVersion}_${platform}";
 
-
     contents = [
-      foundationdb
+      fdb
       # Certificates
       dockerTools.usrBinEnv
       dockerTools.binSh
@@ -57,7 +55,7 @@ let
   extendedAttrs =
     let
       passthru = dockerImage.passthru // {
-        fdbVersion = foundationdb.version;
+        fdbVersion = fdb.version;
       };
     in
     passthru // { inherit passthru; };

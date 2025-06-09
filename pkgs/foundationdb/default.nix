@@ -6,8 +6,8 @@ rec {
   latest = foundationdb73;
 
   foundationdb73 = pkgs.callPackage ./cmake.nix {
-    version = "7.3.43";
-    hash = "sha256-n+17dya2D3rJ/mBR1RJvmEjTtdNFVaQDIlX0TBZ/cfs=";
+    version = "7.3.62";
+    hash = "sha256-tPB/jJbdC11wQvPOI5KtlpQgw9yVLBhxABGgDSBpwBU=";
 
     patches = [
       ./patches/disable-flowbench.patch
@@ -18,6 +18,12 @@ rec {
       (fetchpatch {
         url = "https://github.com/apple/foundationdb/commit/c35a23d3f6b65698c3b888d76de2d93a725bff9c.patch";
         hash = "sha256-bneRoZvCzJp0Hp/G0SzAyUyuDrWErSpzv+ickZQJR5w=";
+      })
+      # Add a dependency that prevents bindingtester to run before the python bindings are generated
+      # https://github.com/apple/foundationdb/pull/11859
+      (fetchpatch {
+        url = "https://github.com/apple/foundationdb/commit/8d04c97a74c6b83dd8aa6ff5af67587044c2a572.patch";
+        hash = "sha256-ZLIcmcfirm1+96DtTIr53HfM5z38uTLZrRNHAmZL6rc=";
       })
     ];
   };
