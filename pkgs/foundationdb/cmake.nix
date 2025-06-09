@@ -32,7 +32,7 @@ let
   stdenv = llvmPackages.libcxxStdenv;
   # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
   # project at build time.
-  enableJemalloc = false;
+  disableJemalloc = true;
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -78,7 +78,7 @@ stdenv.mkDerivation {
     # CMake Error at fdbserver/CMakeLists.txt:332 (find_library):
     # >   Could not find lz4_STATIC_LIBRARIES using the following names: liblz4.a
     "-DSSD_ROCKSDB_EXPERIMENTAL=FALSE"
-    (lib.optional enableJemalloc "-DUSE_JEMALLOC=FALSE")
+    (lib.optional disableJemalloc "-DUSE_JEMALLOC=FALSE")
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
     "-DOPENSSL_CRYPTO_LIBRARY=${openssl.out}/lib/libcrypto${dylib_suffix}"
