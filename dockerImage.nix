@@ -2,6 +2,8 @@
 , stdenv
 , writeShellScriptBin
 , fdbPackages
+, coreutils
+, bash
 , fdb ? fdbPackages.foundationdb71
 }:
 
@@ -36,6 +38,8 @@ let
     tag = "${fdbVersion}_${platform}";
 
     contents = [
+      coreutils
+      bash
       fdb
       # Certificates
       dockerTools.usrBinEnv
