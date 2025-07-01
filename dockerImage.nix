@@ -1,9 +1,11 @@
 { dockerTools
 , stdenv
 , writeShellScriptBin
-, fdbPackages
+, buildEnv
 , coreutils
 , bash
+, pkgs
+, fdbPackages
 , fdb ? fdbPackages.foundationdb71
 }:
 
@@ -33,13 +35,11 @@ let
         --logdir /var/foundationdb/logs
     '';
 
-  dockerImage = dockerTools.buildLayeredImage {
+  dockerImage = dockerTools.streamLayeredImage {
     name = "alekseysidorov/foundationdb";
     tag = "${fdbVersion}_${platform}";
 
     contents = [
-      coreutils
-      bash
       fdb
       # Certificates
       dockerTools.usrBinEnv
@@ -54,6 +54,33 @@ let
       WorkingDir = "/";
     };
   };
+
+  runDockerImage = dockerTools.buildImage {
+    name = "alekseysidorov/foundationdb";
+    tag = "${fdbVersion}_${platform}";
+
+    copyToRoot = buildEnv {
+      name = "image-root";
+      paths = [
+        coreutils
+        bash
+        fdb
+        # Certificates
+        dockerTools.usrBinEnv
+        dockerTools.binSh
+        dockerTools.caCertificates
+        dockerTools.fakeNss
+        entryPoint
+      ];
+      pathsToLink = [ "/bin" ];
+    };
+
+    config = {
+      Cmd = [ "/bin/entry-point.sh" ];
+      WorkingDir = "/";
+    };
+  };
+
 
   # Workaround: passthru doesn't work for docker images, so we have to use merge.
   extendedAttrs =
