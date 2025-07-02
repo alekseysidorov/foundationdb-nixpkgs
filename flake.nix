@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs-old.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
@@ -9,6 +10,7 @@
   outputs =
     { self
     , nixpkgs
+    , nixpkgs-old
     , flake-utils
     , treefmt-nix
     }: flake-utils.lib.eachDefaultSystem
@@ -20,25 +22,34 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
-            (import ./.)
+            localOverlay
           ];
         };
 
         # Eval the treefmt modules from ./treefmt.nix
         treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
-        mkDockerImage = { platform }:
+        mkDockerImage = { platform, foundationdb }:
           let
+            pkgsOld = import nixpkgs-old {
+              inherit system;
+            };
+
             # Setup pkgs for cross compilation
             pkgsCross = import nixpkgs {
               inherit system;
               crossSystem.config = "${platform}-unknown-linux-gnu";
               overlays = [
                 localOverlay
+                (final: prev: {
+                  # Use old fakeroot without "symbol not found in flat namespace '_fstat$INODE64'" bug.
+                  # TODO fix this bug in upstream fakeroot.
+                  fakeroot = pkgsOld.fakeroot;
+                })
               ];
             };
           in
-          pkgsCross.callPackage ./dockerImage.nix { };
+          pkgsCross.callPackage ./dockerImage.nix { inherit foundationdb; };
 
         runDockerImage = dockerImage:
           pkgs.writeShellApplication {
@@ -50,18 +61,56 @@
             '';
           };
 
-        dockerImages = {
-          aarch64 = mkDockerImage {
-            platform = "aarch64";
-          };
-          x86_64 = mkDockerImage {
-            platform = "x86_64";
+        pushDockerImage = { dockerImage, revision ? null }:
+          let
+            # Export variables that are the same for each image.
+            fdbVersion = dockerImage.aarch64.fdbVersion;
+            imageName = dockerImage.aarch64.imageName;
+            imageTag =
+              if revision == null
+              then "${fdbVersion}"
+              else "${fdbVersion}-${revision}";
+          in
+          pkgs.writeShellApplication {
+            name = "push-docker-image";
+            runtimeInputs = with pkgs; [ docker ];
+
+            text = ''
+              docker load --input ${dockerImage.aarch64}
+              docker load --input ${dockerImage.x86_64}
+
+              docker push ${dockerImage.aarch64.imageName}:${dockerImage.aarch64.imageTag}
+              docker push ${dockerImage.x86_64.imageName}:${dockerImage.x86_64.imageTag}
+
+              docker manifest create ${imageName}:${imageTag} \
+                --amend ${dockerImage.aarch64.imageName}:${dockerImage.aarch64.imageTag} \
+                --amend ${dockerImage.x86_64.imageName}:${dockerImage.x86_64.imageTag}
+              docker manifest push ${imageName}:${imageTag}
+            '';
           };
 
-          # Export variables that are the same for each image.
-          clusterFile = dockerImages.aarch64.clusterFile;
-          imageName = dockerImages.aarch64.imageName;
-          fdbVersion = dockerImages.aarch64.fdbVersion;
+        dockerImages = {
+          foundationdb71 = {
+            aarch64 = mkDockerImage {
+              platform = "aarch64";
+              foundationdb = "foundationdb71";
+            };
+            x86_64 = mkDockerImage {
+              platform = "x86_64";
+              foundationdb = "foundationdb71";
+            };
+          };
+
+          foundationdb73 = {
+            aarch64 = mkDockerImage {
+              platform = "aarch64";
+              foundationdb = "foundationdb73";
+            };
+            x86_64 = mkDockerImage {
+              platform = "x86_64";
+              foundationdb = "foundationdb73";
+            };
+          };
         };
       in
       {
@@ -89,38 +138,23 @@
           foundationdb71 = pkgs.fdbPackages.foundationdb71;
           fdbexplorer = pkgs.fdbexplorer;
 
-          dockerImage_aarch64 = runDockerImage dockerImages.aarch64;
-          dockerImage_x86_64 = runDockerImage dockerImages.x86_64;
+          docker-image-foundationdb73-aarch64 = runDockerImage dockerImages.foundationdb73.aarch64;
+          docker-image-foundationdb73-x86_64 = runDockerImage dockerImages.foundationdb73.x86_64;
 
-          pushDockerImage = pkgs.writeShellApplication {
-            name = "push-docker-image";
-            runtimeInputs = with pkgs; [ docker ];
-
-            text = ''
-              set -x
-
-              docker load --input ${dockerImages.aarch64}
-              docker load --input ${dockerImages.x86_64}
-
-              docker push ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag}
-              docker push ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-
-              docker manifest create ${dockerImages.imageName}:${dockerImages.fdbVersion} \
-                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
-                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-              docker manifest push ${dockerImages.imageName}:${dockerImages.fdbVersion}
-
-              # Publish also as latest
-              docker manifest create ${dockerImages.imageName}:latest \
-                --amend ${dockerImages.aarch64.imageName}:${dockerImages.aarch64.imageTag} \
-                --amend ${dockerImages.x86_64.imageName}:${dockerImages.x86_64.imageTag}
-              docker manifest push ${dockerImages.imageName}:latest
-            '';
+          push-docker-image-foundationdb71 = pushDockerImage {
+            dockerImage = dockerImages.foundationdb71;
+            revision = "1";
+          };
+          push-docker-image-foundationdb73 = pushDockerImage {
+            dockerImage = dockerImages.foundationdb73;
+            revision = "1";
           };
         };
 
         apps = {
-          fdbexplorer = flake-utils.lib.mkApp { drv = self.packages.${system}.fdbexplorer; };
+          fdbexplorer = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.fdbexplorer;
+          };
         };
       })
     # System independent modules.

@@ -6,8 +6,8 @@ rec {
   latest = foundationdb73;
 
   foundationdb73 = pkgs.callPackage ./cmake.nix {
-    version = "7.3.62";
-    hash = "sha256-tPB/jJbdC11wQvPOI5KtlpQgw9yVLBhxABGgDSBpwBU=";
+    version = "7.3.63";
+    hash = "sha256-fUyxV6oZdJOh0mv+uWz4hiNqyQHDR6hekTLS62XlPM8=";
 
     patches = [
       ./patches/disable-flowbench.patch

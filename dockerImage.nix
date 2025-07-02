@@ -1,18 +1,13 @@
 { dockerTools
-, stdenv
 , writeShellScriptBin
-, buildEnv
 , coreutils
 , bash
-, pkgs
 , fdbPackages
-, fdb ? fdbPackages.foundationdb71
+, foundationdb ? "foundationdb71"
 }:
 
 let
-  fdbVersion = fdb.version;
-  platform = stdenv.targetPlatform.qemuArch;
-
+  fdb = fdbPackages.${foundationdb};
   entryPoint = writeShellScriptBin "entry-point.sh"
     ''
       # Preparing environment
@@ -21,6 +16,7 @@ let
 
       FDB_PORT="''${FDB_PORT:=4500}"
       FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
+
       echo "Creating FDB cluster file..."
       echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
       echo ""
@@ -35,17 +31,22 @@ let
         --logdir /var/foundationdb/logs
     '';
 
-  dockerImage = dockerTools.streamLayeredImage {
+  dockerImage = dockerTools.buildLayeredImage {
     name = "alekseysidorov/foundationdb";
-    tag = "${fdbVersion}_${platform}";
+    created = "2025-07-02";
 
+    maxLayers = 16;
     contents = [
-      fdb
       # Certificates
       dockerTools.usrBinEnv
       dockerTools.binSh
       dockerTools.caCertificates
       dockerTools.fakeNss
+
+      bash
+      coreutils
+
+      fdb
       entryPoint
     ];
 
@@ -54,33 +55,6 @@ let
       WorkingDir = "/";
     };
   };
-
-  runDockerImage = dockerTools.buildImage {
-    name = "alekseysidorov/foundationdb";
-    tag = "${fdbVersion}_${platform}";
-
-    copyToRoot = buildEnv {
-      name = "image-root";
-      paths = [
-        coreutils
-        bash
-        fdb
-        # Certificates
-        dockerTools.usrBinEnv
-        dockerTools.binSh
-        dockerTools.caCertificates
-        dockerTools.fakeNss
-        entryPoint
-      ];
-      pathsToLink = [ "/bin" ];
-    };
-
-    config = {
-      Cmd = [ "/bin/entry-point.sh" ];
-      WorkingDir = "/";
-    };
-  };
-
 
   # Workaround: passthru doesn't work for docker images, so we have to use merge.
   extendedAttrs =
