@@ -138,16 +138,18 @@
           foundationdb71 = pkgs.fdbPackages.foundationdb71;
           fdbexplorer = pkgs.fdbexplorer;
 
+          docker-image-foundationdb71-aarch64 = runDockerImage dockerImages.foundationdb71.aarch64;
+          docker-image-foundationdb71-x86_64 = runDockerImage dockerImages.foundationdb71.x86_64;
           docker-image-foundationdb73-aarch64 = runDockerImage dockerImages.foundationdb73.aarch64;
           docker-image-foundationdb73-x86_64 = runDockerImage dockerImages.foundationdb73.x86_64;
 
           push-docker-image-foundationdb71 = pushDockerImage {
             dockerImage = dockerImages.foundationdb71;
-            revision = "1";
+            revision = "2";
           };
           push-docker-image-foundationdb73 = pushDockerImage {
             dockerImage = dockerImages.foundationdb73;
-            revision = "1";
+            revision = "2";
           };
         };
 
