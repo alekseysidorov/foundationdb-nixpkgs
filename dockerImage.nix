@@ -1,14 +1,13 @@
 { dockerTools
-, stdenv
 , writeShellScriptBin
+, coreutils
+, bash
 , fdbPackages
-, fdb ? fdbPackages.foundationdb71
+, foundationdb ? "foundationdb71"
 }:
 
 let
-  fdbVersion = fdb.version;
-  platform = stdenv.targetPlatform.qemuArch;
-
+  fdb = fdbPackages.${foundationdb};
   entryPoint = writeShellScriptBin "entry-point.sh"
     ''
       # Preparing environment
@@ -17,6 +16,7 @@ let
 
       FDB_PORT="''${FDB_PORT:=4500}"
       FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
+
       echo "Creating FDB cluster file..."
       echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
       echo ""
@@ -33,15 +33,20 @@ let
 
   dockerImage = dockerTools.buildLayeredImage {
     name = "alekseysidorov/foundationdb";
-    tag = "${fdbVersion}_${platform}";
+    created = "2025-07-02";
 
+    maxLayers = 16;
     contents = [
-      fdb
       # Certificates
       dockerTools.usrBinEnv
       dockerTools.binSh
       dockerTools.caCertificates
       dockerTools.fakeNss
+
+      bash
+      coreutils
+
+      fdb
       entryPoint
     ];
 
