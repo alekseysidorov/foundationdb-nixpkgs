@@ -1,20 +1,23 @@
-{ pkgs
-, fetchpatch
+{
+  pkgs,
+  fetchpatch,
 }:
 
 rec {
   latest = foundationdb73;
 
   foundationdb73 = pkgs.callPackage ./cmake.nix {
-    version = "7.3.63";
-    hash = "sha256-fUyxV6oZdJOh0mv+uWz4hiNqyQHDR6hekTLS62XlPM8=";
+    version = "7.3.68";
+    hash = "sha256-OaV7YyBggeX3vrnI2EYwlWdIGRHOAeP5OZN0Rmd/dnw=";
 
     patches = [
       ./patches/disable-flowbench.patch
       ./patches/don-t-use-static-boost-libs.patch
       ./patches/disable-c-binding-tests.patch
-      # # GetMsgpack: add 4+ versions of upstream
-      # # https://github.com/apple/foundationdb/pull/10935
+      # <https://github.com/apple/foundationdb/pull/12373>
+      ./patches/fix-toml11-4.0.patch
+      # GetMsgpack: add 4+ versions of upstream
+      # https://github.com/apple/foundationdb/pull/10935
       (fetchpatch {
         url = "https://github.com/apple/foundationdb/commit/c35a23d3f6b65698c3b888d76de2d93a725bff9c.patch";
         hash = "sha256-bneRoZvCzJp0Hp/G0SzAyUyuDrWErSpzv+ickZQJR5w=";

@@ -1,27 +1,28 @@
 # This builder is for FoundationDB CMake build system.
 
-{ version
-, rev ? "refs/tags/${version}"
-, hash
-, officialRelease ? false
-, patches ? [ ]
+{
+  version,
+  rev ? "refs/tags/${version}",
+  hash,
+  patches ? [ ],
+  disableJemalloc ? false,
 
-, lib
-, fetchFromGitHub
-, cmake
-, ninja
-, python3
-, mono
-, pkg-config
-, msgpack
-, toml11
-, writeShellScriptBin
-, openssl
-, boost178
-, jemalloc
-, zlib
+  lib,
+  fetchFromGitHub,
+  cmake,
+  ninja,
+  python3,
+  mono,
+  pkg-config,
+  msgpack-cxx,
+  toml11,
+  writeShellScriptBin,
+  openssl,
+  boost178,
+  jemalloc,
+  zlib,
 
-, llvmPackages
+  llvmPackages,
 }:
 
 let
@@ -30,9 +31,6 @@ let
   # Clang uses less resources during compilation and linking, and as a result generates
   # equally fast code.
   stdenv = llvmPackages.libcxxStdenv;
-  # FoundationDB's CMake is hardcoded to pull in jemalloc as an external
-  # project at build time.
-  disableJemalloc = true;
 in
 stdenv.mkDerivation {
   pname = "foundationdb";
@@ -50,27 +48,46 @@ stdenv.mkDerivation {
     ninja
     mono
     python3
-  ] ++ lib.optionals isCross [
+  ]
+  ++ lib.optionals isCross [
     # The simplest and almost incorrect way to provide the proper 'strip' executable.
-    (writeShellScriptBin
-      "strip"
-      ''${stdenv.cc.targetPrefix}strip "$@"'')
+    (writeShellScriptBin "strip" ''${stdenv.cc.targetPrefix}strip "$@"'')
   ];
-
 
   buildInputs = [
     openssl
     boost178
-    msgpack
+    msgpack-cxx
     toml11
     jemalloc
     zlib
   ];
 
+  hardeningDisable = [ "fortify" ];
+
+  inherit patches;
+
+  postPatch = ''
+    # allow using any msgpack-cxx version
+    substituteInPlace cmake/GetMsgpack.cmake \
+      --replace-warn 'find_package(msgpack-cxx 6 QUIET CONFIG)' 'find_package(msgpack-cxx QUIET CONFIG)'
+
+    # Upstream upgraded to Boost 1.86 with no code changes; see:
+    # <https://github.com/apple/foundationdb/pull/11788>
+    substituteInPlace cmake/CompileBoost.cmake \
+      --replace-fail 'find_package(Boost 1.78.0 EXACT ' 'find_package(Boost '
+  '';
+
   cmakeFlags = [
-    (lib.optionalString officialRelease "-DFDB_RELEASE=TRUE")
+    "-DFDB_RELEASE=TRUE"
     # Disable CMake warnings for project developers.
     "-Wno-dev"
+
+    # Disable the default static linking to libc++, libstdc++ and libgcc.
+    #
+    # This leads to various, non-obvious problems as our dependencies bring in
+    # their own copies of these libraries.
+    "-DSTATIC_LINK_LIBCXX=FALSE"
 
     # Disable some options that cause compilation errors
     "-DBUILD_DOCUMENTATION=FALSE"
@@ -85,16 +102,12 @@ stdenv.mkDerivation {
     "-DOPENSSL_SSL_LIBRARY=${openssl.out}/lib/libssl${dylib_suffix}"
   ];
 
-  hardeningDisable = [ "fortify" ];
-
   env.NIX_CFLAGS_COMPILE = toString [
     # Needed with GCC 12
     "-Wno-missing-template-keyword"
     # Needed to compile on aarch64
     (lib.optionalString stdenv.isAarch64 "-march=armv8-a+crc")
   ];
-
-  inherit patches;
 
   # the install phase for cmake is pretty wonky right now since it's not designed to
   # coherently install packages as most linux distros expect -- it's designed to build
@@ -113,13 +126,26 @@ stdenv.mkDerivation {
     mv $out/lib $lib/lib
   '';
 
-  outputs = [ "out" "dev" "lib" ];
+  outputs = [
+    "out"
+    "dev"
+    "lib"
+  ];
 
   meta = with lib; {
     description = "Open source, distributed, transactional key-value store";
     homepage = "https://www.foundationdb.org";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
-    maintainers = with maintainers; [ thoughtpolice lostnet alekseysidorov ];
+    platforms = [
+      "x86_64-linux"
+      "x86_64-darwin"
+      "aarch64-linux"
+      "aarch64-darwin"
+    ];
+    maintainers = with maintainers; [
+      thoughtpolice
+      lostnet
+      alekseysidorov
+    ];
   };
 }

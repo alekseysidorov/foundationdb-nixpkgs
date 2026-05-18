@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-old.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
@@ -8,13 +8,15 @@
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , nixpkgs-old
-    , flake-utils
-    , treefmt-nix
-    }: flake-utils.lib.eachDefaultSystem
-      (system:
+    {
+      self,
+      nixpkgs,
+      nixpkgs-old,
+      flake-utils,
+      treefmt-nix,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         localOverlay = (import ./.);
 
@@ -29,7 +31,8 @@
         # Eval the treefmt modules from ./treefmt.nix
         treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
-        mkDockerImage = { platform, foundationdb }:
+        mkDockerImage =
+          { platform, foundationdb }:
           let
             pkgsOld = import nixpkgs-old {
               inherit system;
@@ -51,7 +54,8 @@
           in
           pkgsCross.callPackage ./dockerImage.nix { inherit foundationdb; };
 
-        runDockerImage = dockerImage:
+        runDockerImage =
+          dockerImage:
           pkgs.writeShellApplication {
             name = "run-docker-image";
             runtimeInputs = with pkgs; [ docker ];
@@ -61,15 +65,16 @@
             '';
           };
 
-        pushDockerImage = { dockerImage, revision ? null }:
+        pushDockerImage =
+          {
+            dockerImage,
+            revision ? null,
+          }:
           let
             # Export variables that are the same for each image.
             fdbVersion = dockerImage.aarch64.fdbVersion;
             imageName = dockerImage.aarch64.imageName;
-            imageTag =
-              if revision == null
-              then "${fdbVersion}"
-              else "${fdbVersion}-${revision}";
+            imageTag = if revision == null then "${fdbVersion}" else "${fdbVersion}-${revision}";
           in
           pkgs.writeShellApplication {
             name = "push-docker-image";
@@ -130,7 +135,12 @@
               fdbPackages.foundationdb73
             ];
           };
-          default = foundationdb73;
+          default = mkShell {
+            nativeBuildInputs = [
+              fdbPackages.foundationdb73
+              typos-lsp
+            ];
+          };
         };
 
         packages = {
@@ -158,7 +168,8 @@
             drv = self.packages.${system}.fdbexplorer;
           };
         };
-      })
+      }
+    )
     # System independent modules.
     // {
       # The usual flake attributes can be defined here, including system-
