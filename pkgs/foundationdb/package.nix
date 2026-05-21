@@ -71,6 +71,16 @@ stdenv.mkDerivation rec {
     substituteInPlace bindings/c/test/unit/third_party/CMakeLists.txt \
       --replace-fail '/opt/doctest_proj_2.4.8' '${doctest}/include'
 
+    # fmt 8.1.1 (bundled in contrib/) enables `consteval` for Clang >= 11
+    # and GCC >= 10. However Clang 21+ (used via nixpkgs LLVM toolchain) has
+    # stricter constant-expression evaluation that rejects fmt's
+    # format_string_checker pointer arithmetic. Simply redefine FMT_CONSTEVAL
+    # to empty so that format-string validation falls back to runtime checks.
+    substituteInPlace contrib/fmt-8.1.1/include/fmt/core.h \
+      --replace-fail \
+        '#    define FMT_CONSTEVAL consteval' \
+        '#    define FMT_CONSTEVAL /* disabled: broken with Clang 21+ */'
+
     # Upstream upgraded to Boost 1.86 with no code changes; see:
     # <https://github.com/apple/foundationdb/pull/11788>
     substituteInPlace cmake/CompileBoost.cmake \
@@ -119,11 +129,14 @@ stdenv.mkDerivation rec {
 
     # LTO brings up overall build time, but results in much smaller
     # binaries for all users and the cache.
-    "-DUSE_LTO=ON"
+    # On Darwin: LTO requires llvm-ar/llvm-ranlib (not in PATH via clang-wrapper)
+    # and the Gold linker doesn't exist, so skip both.
+    (if stdenv.isDarwin then "-DUSE_LTO=OFF" else "-DUSE_LTO=ON")
 
     # Gold helps alleviate the link time, especially when LTO is
     # enabled. But even then, it still takes a majority of the time.
-    "-DUSE_LD=GOLD"
+    # Gold is Linux-only; on Darwin fall back to the system linker.
+    (if stdenv.isDarwin then "-DUSE_LD=DEFAULT" else "-DUSE_LD=GOLD")
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
