@@ -34,5 +34,5 @@ index 89d4508ad..4cc11a7bf 100644
  		using base_variant = std::
  		    variant<int, float, double, bool, std::string, std::vector<int>, std::vector<std::string>, ConfigDBType>;
  		using types =
--- 
+--
 2.51.0

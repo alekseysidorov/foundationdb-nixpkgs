@@ -32,7 +32,7 @@
         treefmt = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build;
 
         mkDockerImage =
-          { platform, foundationdb }:
+          { platform }:
           let
             pkgsOld = import nixpkgs-old {
               inherit system;
@@ -52,7 +52,7 @@
               ];
             };
           in
-          pkgsCross.callPackage ./dockerImage.nix { inherit foundationdb; };
+          pkgsCross.callPackage ./dockerImage.nix { };
 
         runDockerImage =
           dockerImage:
@@ -95,25 +95,12 @@
           };
 
         dockerImages = {
-          foundationdb71 = {
+          foundationdb = {
             aarch64 = mkDockerImage {
               platform = "aarch64";
-              foundationdb = "foundationdb71";
             };
             x86_64 = mkDockerImage {
               platform = "x86_64";
-              foundationdb = "foundationdb71";
-            };
-          };
-
-          foundationdb73 = {
-            aarch64 = mkDockerImage {
-              platform = "aarch64";
-              foundationdb = "foundationdb73";
-            };
-            x86_64 = mkDockerImage {
-              platform = "x86_64";
-              foundationdb = "foundationdb73";
             };
           };
         };
@@ -124,42 +111,25 @@
         # for `nix flake check`
         checks.formatting = treefmt.check self;
 
-        devShells = with pkgs; rec {
-          foundationdb71 = mkShell {
-            nativeBuildInputs = [
-              fdbPackages.foundationdb71
-            ];
-          };
-          foundationdb73 = mkShell {
-            nativeBuildInputs = [
-              fdbPackages.foundationdb73
-            ];
-          };
+        devShells = with pkgs; {
           default = mkShell {
             nativeBuildInputs = [
-              fdbPackages.foundationdb73
+              foundationdb
               typos-lsp
             ];
           };
         };
 
         packages = {
-          foundationdb73 = pkgs.fdbPackages.foundationdb73;
-          foundationdb71 = pkgs.fdbPackages.foundationdb71;
+          foundationdb = pkgs.foundationdb;
           fdbexplorer = pkgs.fdbexplorer;
 
-          docker-image-foundationdb71-aarch64 = runDockerImage dockerImages.foundationdb71.aarch64;
-          docker-image-foundationdb71-x86_64 = runDockerImage dockerImages.foundationdb71.x86_64;
-          docker-image-foundationdb73-aarch64 = runDockerImage dockerImages.foundationdb73.aarch64;
-          docker-image-foundationdb73-x86_64 = runDockerImage dockerImages.foundationdb73.x86_64;
+          docker-image-foundationdb-aarch64 = runDockerImage dockerImages.foundationdb.aarch64;
+          docker-image-foundationdb-x86_64 = runDockerImage dockerImages.foundationdb.x86_64;
 
-          push-docker-image-foundationdb71 = pushDockerImage {
-            dockerImage = dockerImages.foundationdb71;
-            revision = "2";
-          };
-          push-docker-image-foundationdb73 = pushDockerImage {
-            dockerImage = dockerImages.foundationdb73;
-            revision = "2";
+          push-docker-image-foundationdb = pushDockerImage {
+            dockerImage = dockerImages.foundationdb;
+            revision = "3";
           };
         };
 

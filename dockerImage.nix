@@ -2,34 +2,32 @@
 , writeShellScriptBin
 , coreutils
 , bash
-, fdbPackages
-, foundationdb ? "foundationdb71"
+, foundationdb
+,
 }:
 
 let
-  fdb = fdbPackages.${foundationdb};
-  entryPoint = writeShellScriptBin "entry-point.sh"
-    ''
-      # Preparing environment
-      mkdir -p /var/foundationdb/logs
-      mkdir -p /var/foundationdb/data
+  entryPoint = writeShellScriptBin "entry-point.sh" ''
+    # Preparing environment
+    mkdir -p /var/foundationdb/logs
+    mkdir -p /var/foundationdb/data
 
-      FDB_PORT="''${FDB_PORT:=4500}"
-      FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
+    FDB_PORT="''${FDB_PORT:=4500}"
+    FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
 
-      echo "Creating FDB cluster file..."
-      echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
-      echo ""
-      cat $FDB_CLUSTER_FILE
+    echo "Creating FDB cluster file..."
+    echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
+    echo ""
+    cat $FDB_CLUSTER_FILE
 
-      echo "Starting FDB server on 0.0.0.0:$FDB_PORT"
-      fdbcli -C $FDB_CLUSTER_FILE --exec "configure new single memory; status" &
+    echo "Starting FDB server on 0.0.0.0:$FDB_PORT"
+    fdbcli -C $FDB_CLUSTER_FILE --exec "configure new single memory; status" &
 
-      fdbserver -p 0.0.0.0:$FDB_PORT \
-        -C $FDB_CLUSTER_FILE
-        --datadir /var/foundationdb/data \
-        --logdir /var/foundationdb/logs
-    '';
+    fdbserver -p 0.0.0.0:$FDB_PORT \
+      -C $FDB_CLUSTER_FILE
+      --datadir /var/foundationdb/data \
+      --logdir /var/foundationdb/logs
+  '';
 
   dockerImage = dockerTools.buildLayeredImage {
     name = "alekseysidorov/foundationdb";
@@ -46,7 +44,7 @@ let
       bash
       coreutils
 
-      fdb
+      foundationdb
       entryPoint
     ];
 
@@ -60,7 +58,7 @@ let
   extendedAttrs =
     let
       passthru = dockerImage.passthru // {
-        fdbVersion = fdb.version;
+        fdbVersion = foundationdb.version;
       };
     in
     passthru // { inherit passthru; };

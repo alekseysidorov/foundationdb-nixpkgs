@@ -1,4 +1,4 @@
 final: prev: {
-  fdbPackages = prev.callPackage ./pkgs/foundationdb { };
-  fdbexplorer = prev.callPackage ./pkgs/fdbexplorer.nix { };
+  foundationdb = prev.callPackage ./pkgs/foundationdb/package.nix { };
+  fdbexplorer = final.callPackage ./pkgs/fdbexplorer.nix { };
 }

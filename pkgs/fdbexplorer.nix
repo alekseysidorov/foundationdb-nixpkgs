@@ -1,7 +1,8 @@
 { lib
 , buildGoModule
-, fdbPackages
+, foundationdb
 , fetchFromGitHub
+,
 }:
 
 buildGoModule rec {
@@ -17,7 +18,7 @@ buildGoModule rec {
   vendorHash = "sha256-JCh2DQ0cAyQOQM6oBdBsE4VvOrZPKXF05GF+t8o55VM=";
 
   buildInputs = [
-    fdbPackages.latest.dev
+    foundationdb.dev
   ];
 
   meta = with lib; {

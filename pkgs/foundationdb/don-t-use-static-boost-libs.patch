@@ -15,13 +15,12 @@ index 3bc47c776..62b448421 100644
 +++ b/cmake/CompileBoost.cmake
 @@ -85,7 +85,7 @@ if(USE_SANITIZER)
  endif()
- 
+
  # since boost 1.72 boost installs cmake configs. We will enforce config mode
 -set(Boost_USE_STATIC_LIBS ON)
 +set(Boost_USE_STATIC_LIBS OFF)
- 
+
  # Clang and Gcc will have different name mangling to std::call_once, etc.
  if (UNIX AND CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
--- 
+--
 2.37.1 (Apple Git-137.1)
-
