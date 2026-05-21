@@ -1,9 +1,9 @@
-{ dockerTools
-, writeShellScriptBin
-, coreutils
-, bash
-, foundationdb
-,
+{
+  dockerTools,
+  writeShellScriptBin,
+  coreutils,
+  bash,
+  foundationdb,
 }:
 
 let

@@ -4,6 +4,10 @@
   # Used to find the project root
   projectRootFile = "flake.nix";
 
-  programs.nixpkgs-fmt.enable = true;
-  programs.deno.enable = true;
+  programs = {
+    nixfmt.enable = true;
+    beautysh.enable = true;
+    deno.enable = true;
+    taplo.enable = true;
+  };
 }

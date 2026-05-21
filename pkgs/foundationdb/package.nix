@@ -29,6 +29,13 @@ let
     isOdd patch;
 
   dylib_suffix = stdenv.hostPlatform.extensions.sharedLibrary;
+  # LTO requires llvm-ar/gcc-ar to be present in PATH, which the nixpkgs
+  # clang-wrapper does not expose. Disable on Darwin and during cross-compilation;
+  # in both cases the regular `ar` wrapper is used instead.
+  useLto = !stdenv.isDarwin && stdenv.buildPlatform == stdenv.hostPlatform;
+  # Gold linker is Linux-only, part of GNU binutils, and only worthwhile alongside LTO.
+  # With Clang the default linker (lld) is used instead.
+  useGold = useLto && stdenv.cc.isGNU;
 in
 stdenv.mkDerivation rec {
   pname = "foundationdb";
@@ -129,14 +136,11 @@ stdenv.mkDerivation rec {
 
     # LTO brings up overall build time, but results in much smaller
     # binaries for all users and the cache.
-    # On Darwin: LTO requires llvm-ar/llvm-ranlib (not in PATH via clang-wrapper)
-    # and the Gold linker doesn't exist, so skip both.
-    (if stdenv.isDarwin then "-DUSE_LTO=OFF" else "-DUSE_LTO=ON")
+    (if useLto then "-DUSE_LTO=ON" else "-DUSE_LTO=OFF")
 
     # Gold helps alleviate the link time, especially when LTO is
     # enabled. But even then, it still takes a majority of the time.
-    # Gold is Linux-only; on Darwin fall back to the system linker.
-    (if stdenv.isDarwin then "-DUSE_LD=DEFAULT" else "-DUSE_LD=GOLD")
+    (if useGold then "-DUSE_LD=GOLD" else "-DUSE_LD=DEFAULT")
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
@@ -190,13 +194,13 @@ stdenv.mkDerivation rec {
     license = lib.licenses.asl20;
     platforms = [
       "x86_64-linux"
+      "x86_64-darwin"
     ]
     ++ lib.optionals (!(avxEnabled version)) [
       "aarch64-linux"
       "aarch64-darwin"
     ];
-    # Fails when cross-compiling with "/bin/sh: gcc-ar: not found"
-    broken = stdenv.buildPlatform != stdenv.hostPlatform;
+
     maintainers = with lib.maintainers; [
       thoughtpolice
       lostnet
