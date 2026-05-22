@@ -3,6 +3,7 @@
   fetchFromGitHub,
   lib,
   fetchpatch,
+  binutils,
   cmake,
   ninja,
   python3,
