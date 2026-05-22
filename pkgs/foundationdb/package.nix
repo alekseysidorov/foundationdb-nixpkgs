@@ -88,14 +88,17 @@ stdenv.mkDerivation rec {
         '#    define FMT_CONSTEVAL consteval' \
         '#    define FMT_CONSTEVAL /* disabled: broken with Clang 21+ */'
 
-    # implib-gen.py calls bare 'readelf'; on Darwin the stdenv binutils is
-    # Apple cctools which has no readelf (ELF is Linux-only). Bake in the
-    # full path to GNU readelf from the cross-targeting binutils-unwrapped
-    # (stdenv.cc.bintools.bintools) so the script works on all build platforms.
+    # implib-gen.py calls bare binutils tools; on Darwin the stdenv binutils is
+    # Apple cctools which lacks ELF utilities (readelf, c++filt). Bake in the
+    # full path from the cross-targeting binutils-unwrapped so the script
+    # works on all build platforms.
     substituteInPlace contrib/Implib.so/implib-gen.py \
       --replace-fail \
         'run(["readelf"' \
-        'run(["${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}readelf"'
+        'run(["${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}readelf"' \
+      --replace-fail \
+        'run(["c++filt"' \
+        'run(["${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}c++filt"'
 
     # Upstream upgraded to Boost 1.86 with no code changes; see:
     # <https://github.com/apple/foundationdb/pull/11788>
