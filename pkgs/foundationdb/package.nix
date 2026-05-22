@@ -88,6 +88,15 @@ stdenv.mkDerivation rec {
         '#    define FMT_CONSTEVAL consteval' \
         '#    define FMT_CONSTEVAL /* disabled: broken with Clang 21+ */'
 
+    # strip_debug_symbols() in cmake/FlowCommands.cmake hardcodes the bare
+    # `strip` command, which is not available in PATH during cross-compilation
+    # (only the prefixed variant is). Replace it with CMake's CMAKE_STRIP
+    # variable so the correct cross-strip is used (set via cmakeFlags below).
+    substituteInPlace cmake/FlowCommands.cmake \
+      --replace-fail \
+        'set(strip_command strip)' \
+        'set(strip_command ''${CMAKE_STRIP})'
+
     # implib-gen.py calls bare binutils tools; on Darwin the stdenv binutils is
     # Apple cctools which lacks ELF utilities (readelf, c++filt). Bake in the
     # full path from the cross-targeting binutils-unwrapped so the script
@@ -153,6 +162,12 @@ stdenv.mkDerivation rec {
     # Gold helps alleviate the link time, especially when LTO is
     # enabled. But even then, it still takes a majority of the time.
     (if useGold then "-DUSE_LD=GOLD" else "-DUSE_LD=DEFAULT")
+
+    # Point CMake at the correct strip for the target platform.
+    # During cross-compilation nixpkgs does not put a bare `strip` in PATH;
+    # only the prefixed variant (e.g. aarch64-unknown-linux-gnu-strip) is
+    # available, so we resolve it explicitly here.
+    "-DCMAKE_STRIP=${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}strip"
 
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
