@@ -95,7 +95,7 @@ stdenv.mkDerivation rec {
     substituteInPlace contrib/Implib.so/implib-gen.py \
       --replace-fail \
         'run(["readelf"' \
-        'run(["${stdenv.cc.bintools.bintools}/bin/readelf"'
+        'run(["${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}readelf"'
 
     # Upstream upgraded to Boost 1.86 with no code changes; see:
     # <https://github.com/apple/foundationdb/pull/11788>
