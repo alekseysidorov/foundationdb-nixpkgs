@@ -36,6 +36,9 @@ let
   # Gold linker is Linux-only, part of GNU binutils, and only worthwhile alongside LTO.
   # With Clang the default linker (lld) is used instead.
   useGold = useLto && stdenv.cc.isGNU;
+  # Java bindings require JNI libraries for the *target* platform, but openjdk
+  # in nativeBuildInputs is built for the build platform. Disable when cross-compiling.
+  useJava = stdenv.buildPlatform == stdenv.hostPlatform;
 in
 stdenv.mkDerivation rec {
   pname = "foundationdb";
@@ -169,6 +172,12 @@ stdenv.mkDerivation rec {
     # available, so we resolve it explicitly here.
     "-DCMAKE_STRIP=${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.targetPrefix}strip"
 
+    # Java bindings require JNI libraries for the *target* platform, but the
+    # openjdk in nativeBuildInputs is built for the build platform. Linking
+    # x86_64 JVM libs into an aarch64 binary fails with "wrong format".
+    # Disable Java bindings when cross-compiling.
+    (lib.optionalString (!useJava) "-DBUILD_JAVA_BINDING=FALSE")
+
     # FIXME: why can't openssl be found automatically?
     "-DOPENSSL_USE_STATIC_LIBS=FALSE"
     "-DOPENSSL_CRYPTO_LIBRARY=${openssl.out}/lib/libcrypto${dylib_suffix}"
@@ -203,9 +212,11 @@ stdenv.mkDerivation rec {
     cp -R ./bindings/python/                          tmp-pythonsrc/
     tar -zcf $pythonsrc --transform s/tmp-pythonsrc/python-foundationdb/ ./tmp-pythonsrc/
 
-    # java bindings
-    mkdir -p $lib/share/java
-    mv lib/fdb-java-*.jar $lib/share/java/fdb-java.jar
+    # java bindings (not built when cross-compiling, see BUILD_JAVA_BINDING above)
+    ${lib.optionalString useJava ''
+      mkdir -p $lib/share/java
+      mv lib/fdb-java-*.jar $lib/share/java/fdb-java.jar
+    ''}
   '';
 
   outputs = [
