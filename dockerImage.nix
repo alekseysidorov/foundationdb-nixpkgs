@@ -3,30 +3,78 @@
   writeShellScriptBin,
   coreutils,
   bash,
+  iproute2,
   foundationdb,
 }:
 
 let
   entryPoint = writeShellScriptBin "entry-point.sh" ''
-    # Preparing environment
-    mkdir -p /var/foundationdb/logs
-    mkdir -p /var/foundationdb/data
+    set -Eeuo pipefail
+    set -m  # enable job control so we can use `fg` at the end
 
     FDB_PORT="''${FDB_PORT:=4500}"
-    FDB_CLUSTER_FILE="/var/foundationdb/fdb.cluster"
+    FDB_NETWORKING_MODE="''${FDB_NETWORKING_MODE:=container}"
+    FDB_PROCESS_CLASS="''${FDB_PROCESS_CLASS:=unset}"
+    FDB_CLUSTER_FILE="''${FDB_CLUSTER_FILE:=/var/foundationdb/fdb.cluster}"
 
-    echo "Creating FDB cluster file..."
-    echo "docker:dockerdb@127.0.0.1:$FDB_PORT" > $FDB_CLUSTER_FILE
-    echo ""
-    cat $FDB_CLUSTER_FILE
+    mkdir -p /var/foundationdb/logs
+    mkdir -p /var/foundationdb/data
+    mkdir -p "$(dirname "$FDB_CLUSTER_FILE")"
 
-    echo "Starting FDB server on 0.0.0.0:$FDB_PORT"
-    fdbcli -C $FDB_CLUSTER_FILE --exec "configure new single memory; status" &
+    # Determine the public IP address.
+    # Supports override via FDB_PUBLIC_IP env var (e.g. Kubernetes Downward API).
+    if [[ -z "''${FDB_PUBLIC_IP:-}" ]]; then
+      if [[ "$FDB_NETWORKING_MODE" == "host" ]]; then
+        FDB_PUBLIC_IP="127.0.0.1"
+      else
+        # Use `ip route get` to find the source address for outbound traffic.
+        # Pure-bash parsing avoids a dependency on awk/grep.
+        _prev=""
+        for _w in $(ip route get 1.1.1.1 2>/dev/null || ip -6 route get ::1 2>/dev/null || true); do
+          if [[ "$_prev" == "src" ]]; then
+            FDB_PUBLIC_IP="$_w"
+            break
+          fi
+          _prev="$_w"
+        done
+        FDB_PUBLIC_IP="''${FDB_PUBLIC_IP:-127.0.0.1}"
+      fi
+    fi
 
-    fdbserver -p 0.0.0.0:$FDB_PORT \
-      -C $FDB_CLUSTER_FILE
-      --datadir /var/foundationdb/data \
-      --logdir /var/foundationdb/logs
+    # IPv6 addresses need square brackets in the cluster-file and listen address.
+    if [[ "$FDB_PUBLIC_IP" == *:* ]]; then
+      PUBLIC_ADDR="[$FDB_PUBLIC_IP]:$FDB_PORT"
+      LISTEN_ADDR="[::]:$FDB_PORT"
+    else
+      PUBLIC_ADDR="$FDB_PUBLIC_IP:$FDB_PORT"
+      LISTEN_ADDR="0.0.0.0:$FDB_PORT"
+    fi
+
+    echo "Creating FDB cluster file at $FDB_CLUSTER_FILE ..."
+    echo "docker:dockerdb@$PUBLIC_ADDR" > "$FDB_CLUSTER_FILE"
+    cat "$FDB_CLUSTER_FILE"
+
+    echo "Starting FDB server (listen: $LISTEN_ADDR, public: $PUBLIC_ADDR) ..."
+    fdbserver \
+      --listen-address  "$LISTEN_ADDR" \
+      --public-address  "$PUBLIC_ADDR" \
+      --locality-zoneid="$HOSTNAME" \
+      --locality-machineid="$HOSTNAME" \
+      --class           "$FDB_PROCESS_CLASS" \
+      --knob_disable_posix_kernel_aio=1 \
+      -C                "$FDB_CLUSTER_FILE" \
+      --datadir         /var/foundationdb/data \
+      --logdir          /var/foundationdb/logs &
+
+    echo "Waiting for FDB server to start (5s) ..."
+    sleep 5
+
+    echo "Configuring FDB cluster ..."
+    fdbcli -C "$FDB_CLUSTER_FILE" --exec "configure new single memory; status"
+
+    # Bring fdbserver back to foreground so it becomes PID 1's child and the
+    # container stays alive until the server exits.
+    fg %1
   '';
 
   dockerImage = dockerTools.buildLayeredImage {
@@ -43,6 +91,7 @@ let
 
       bash
       coreutils
+      iproute2 # provides `ip` for public-IP detection
 
       foundationdb
       entryPoint

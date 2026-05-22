@@ -106,6 +106,9 @@ stdenv.mkDerivation rec {
   checkInputs = [ doctest ];
 
   nativeBuildInputs = [
+    # binutils provides bare `readelf` (used by contrib/Implib.so/implib-gen.py
+    # to inspect libfdb_c.so symbols during cross-compilation).
+    binutils
     cmake
     mono
     ninja
