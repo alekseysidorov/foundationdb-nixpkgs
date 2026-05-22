@@ -3,7 +3,6 @@
   fetchFromGitHub,
   lib,
   fetchpatch,
-  binutils,
   cmake,
   ninja,
   python3,
@@ -89,6 +88,15 @@ stdenv.mkDerivation rec {
         '#    define FMT_CONSTEVAL consteval' \
         '#    define FMT_CONSTEVAL /* disabled: broken with Clang 21+ */'
 
+    # implib-gen.py calls bare 'readelf'; on Darwin the stdenv binutils is
+    # Apple cctools which has no readelf (ELF is Linux-only). Bake in the
+    # full path to GNU readelf from the cross-targeting binutils-unwrapped
+    # (stdenv.cc.bintools.bintools) so the script works on all build platforms.
+    substituteInPlace contrib/Implib.so/implib-gen.py \
+      --replace-fail \
+        'run(["readelf"' \
+        'run(["${stdenv.cc.bintools.bintools}/bin/readelf"'
+
     # Upstream upgraded to Boost 1.86 with no code changes; see:
     # <https://github.com/apple/foundationdb/pull/11788>
     substituteInPlace cmake/CompileBoost.cmake \
@@ -107,9 +115,6 @@ stdenv.mkDerivation rec {
   checkInputs = [ doctest ];
 
   nativeBuildInputs = [
-    # binutils provides bare `readelf` (used by contrib/Implib.so/implib-gen.py
-    # to inspect libfdb_c.so symbols during cross-compilation).
-    binutils
     cmake
     mono
     ninja
