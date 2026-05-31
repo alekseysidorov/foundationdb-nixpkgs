@@ -1,7 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    nixpkgs-old.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     flake-utils.url = "github:numtide/flake-utils";
@@ -11,7 +10,6 @@
     {
       self,
       nixpkgs,
-      nixpkgs-old,
       flake-utils,
       treefmt-nix,
     }:
@@ -34,21 +32,12 @@
         mkDockerImage =
           { platform }:
           let
-            pkgsOld = import nixpkgs-old {
-              inherit system;
-            };
-
             # Setup pkgs for cross compilation
             pkgsCross = import nixpkgs {
               inherit system;
               crossSystem.config = "${platform}-unknown-linux-gnu";
               overlays = [
                 localOverlay
-                (final: prev: {
-                  # Use old fakeroot without "symbol not found in flat namespace '_fstat$INODE64'" bug.
-                  # TODO fix this bug in upstream fakeroot.
-                  fakeroot = pkgsOld.fakeroot;
-                })
               ];
             };
           in

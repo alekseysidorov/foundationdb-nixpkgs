@@ -2,8 +2,8 @@
   dockerTools,
   writeShellScriptBin,
   coreutils,
+  hostname,
   bash,
-  iproute2,
   foundationdb,
 }:
 
@@ -27,16 +27,8 @@ let
       if [[ "$FDB_NETWORKING_MODE" == "host" ]]; then
         FDB_PUBLIC_IP="127.0.0.1"
       else
-        # Use `ip route get` to find the source address for outbound traffic.
-        # Pure-bash parsing avoids a dependency on awk/grep.
-        _prev=""
-        for _w in $(ip route get 1.1.1.1 2>/dev/null || ip -6 route get ::1 2>/dev/null || true); do
-          if [[ "$_prev" == "src" ]]; then
-            FDB_PUBLIC_IP="$_w"
-            break
-          fi
-          _prev="$_w"
-        done
+        # Use hostname -I to get the host's IP address.
+        FDB_PUBLIC_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
         FDB_PUBLIC_IP="''${FDB_PUBLIC_IP:-127.0.0.1}"
       fi
     fi
@@ -91,7 +83,7 @@ let
 
       bash
       coreutils
-      iproute2 # provides `ip` for public-IP detection
+      hostname # for hostname -I (public IP detection)
 
       foundationdb
       entryPoint
